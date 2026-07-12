@@ -4,6 +4,8 @@ An end-to-end Security Operations Center home lab that simulates a small enterpr
 
 **Author:** Manea Al-Shabrain · [GitHub](https://github.com/HunterQA) · [LinkedIn](https://www.linkedin.com/in/manea-al-shabrain)
 
+📖 **Full write-up:** [SOC-Home-Lab-Complete-Documentation-Phase-0-to-10.pdf](SOC-Home-Lab-Complete-Documentation-Phase-0-to-10.pdf) — the complete Phase 0–10 build, detection, investigation, and hardening documentation.
+
 ---
 
 ## 🎯 What this project demonstrates
@@ -111,6 +113,7 @@ A SOC monitoring dashboard summarizing events, top hosts, failed/successful logo
 Active Directory · Windows Event Logging · Sysmon telemetry · Splunk SPL · SIEM log collection (Universal Forwarder) · attack detection · incident investigation & reporting · **system hardening & validation**.
 
 ## 📁 Repository contents
+- `SOC-Home-Lab-Complete-Documentation-Phase-0-to-10.pdf` — **full Phase 0–10 build & analysis documentation**
 - `Phase09-Incident-Report-BruteForce-Final.pdf` — incident report
 - `Phase10-Hardening-Validation-Report-Final.pdf` — hardening & validation report
 - `soc_monitoring_Dashboard.pdf` — SOC dashboard
