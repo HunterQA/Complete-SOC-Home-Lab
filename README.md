@@ -20,18 +20,16 @@ An end-to-end Security Operations Center home lab that simulates a small enterpr
   192.168.10.30                192.168.10.20
   (attacker)                   (Sysmon + Splunk UF)
                                      |
-                                     | logs
+                                     | logs (fwd :9997)
                                      v
-[ Windows Server 2022 (DC01) ] -->  [ Splunk Enterprise ]  <-- analysis
-  192.168.10.10                      192.168.10.40
-  AD + DNS (Sysmon + UF)             index: main
+   [ Windows Server 2022 (DC01) ]  — 192.168.10.10
+   AD + DNS + Splunk Enterprise (SIEM, index: main)
 ```
 
 ## 🧩 Lab components
 | Host | IP | Role |
 |------|-----|------|
-| DC01 (Windows Server 2022) | 192.168.10.10 | Active Directory + DNS + Domain Controller |
-| SPLUNK01 (Ubuntu Server) | 192.168.10.40 | Splunk Enterprise (SIEM) |
+| DC01 (Windows Server 2022) | 192.168.10.10 | Active Directory + DNS + **Splunk Enterprise** (SIEM) |
 | WIN11-01 (Windows 11) | 192.168.10.20 | Domain-joined endpoint + Sysmon + UF |
 | KALI01 (Kali Linux) | 192.168.10.30 | Attack simulation (isolated lab only) |
 
