@@ -17,23 +17,23 @@ An end-to-end Security Operations Center home lab that simulates a small enterpr
 ## 🗺️ Architecture
 ```
 [ Kali Linux ]  --attack-->  [ Windows 11 Client ]
-  192.168.100.40               192.168.100.30
+  192.168.10.30                192.168.10.20
   (attacker)                   (Sysmon + Splunk UF)
                                      |
                                      | logs
                                      v
 [ Windows Server 2022 (DC01) ] -->  [ Splunk Enterprise ]  <-- analysis
-  192.168.100.10                     192.168.100.20
+  192.168.10.10                      192.168.10.40
   AD + DNS (Sysmon + UF)             indexes: wineventlog, sysmon
 ```
 
 ## 🧩 Lab components
 | Host | IP | Role |
 |------|-----|------|
-| DC01 (Windows Server 2022) | 192.168.100.10 | Active Directory + DNS + Domain Controller |
-| SPLUNK01 (Ubuntu Server) | 192.168.100.20 | Splunk Enterprise (SIEM) |
-| WIN11-01 (Windows 11) | 192.168.100.30 | Domain-joined endpoint + Sysmon + UF |
-| KALI01 (Kali Linux) | 192.168.100.40 | Attack simulation (isolated lab only) |
+| DC01 (Windows Server 2022) | 192.168.10.10 | Active Directory + DNS + Domain Controller |
+| SPLUNK01 (Ubuntu Server) | 192.168.10.40 | Splunk Enterprise (SIEM) |
+| WIN11-01 (Windows 11) | 192.168.10.20 | Domain-joined endpoint + Sysmon + UF |
+| KALI01 (Kali Linux) | 192.168.10.30 | Attack simulation (isolated lab only) |
 
 Network: isolated Host-Only network · Domain: `soclab.local`
 
@@ -79,7 +79,7 @@ index=sysmon EventCode=3
 ```
 
 ## 🧭 Incident investigation (highlights)
-Traced a **NetExec SMB brute-force** attack from `192.168.100.40` against a target account: identified the attacker IP, the targeted account, built an attack timeline, and confirmed the follow-up successful logon and Sysmon network connections.
+Traced a **NetExec SMB brute-force** attack from `192.168.10.30` against a target account: identified the attacker IP, the targeted account, built an attack timeline, and confirmed the follow-up successful logon and Sysmon network connections.
 → Full write-up: **[Phase09-Incident-Report-BruteForce-Final.pdf](Phase09-Incident-Report-BruteForce-Final.pdf)**
 
 ## 🔒 Hardening & validation (the standout)
