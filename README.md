@@ -1,0 +1,118 @@
+# 🛡️ Complete SOC Home Lab — Active Directory + Sysmon + Splunk
+
+An end-to-end Security Operations Center home lab that simulates a small enterprise: an attacker (Kali) targets a Windows Active Directory environment, endpoint & security telemetry is collected with **Sysmon** and forwarded to **Splunk Enterprise**, and the attacks are **detected, investigated, and then defeated through hardening**.
+
+**Author:** Manea Al-Shabrain · [GitHub](https://github.com/HunterQA) · [LinkedIn](https://www.linkedin.com/in/manea-al-shabrain)
+
+---
+
+## 🎯 What this project demonstrates
+- Building a Windows **Active Directory** domain (`soclab.local`) from scratch.
+- Deploying **Splunk Enterprise** as a SIEM and shipping logs via **Universal Forwarder**.
+- Endpoint visibility with **Sysmon** (process creation, network connections).
+- **Detecting** real attacks (network scanning, SMB brute force) with SPL.
+- **Investigating** an incident end-to-end (attacker IP, targeted account, timeline).
+- **Hardening** the environment and **validating** that the same attack is now blocked.
+
+## 🗺️ Architecture
+```
+[ Kali Linux ]  --attack-->  [ Windows 11 Client ]
+  192.168.100.40               192.168.100.30
+  (attacker)                   (Sysmon + Splunk UF)
+                                     |
+                                     | logs
+                                     v
+[ Windows Server 2022 (DC01) ] -->  [ Splunk Enterprise ]  <-- analysis
+  192.168.100.10                     192.168.100.20
+  AD + DNS (Sysmon + UF)             indexes: wineventlog, sysmon
+```
+
+## 🧩 Lab components
+| Host | IP | Role |
+|------|-----|------|
+| DC01 (Windows Server 2022) | 192.168.100.10 | Active Directory + DNS + Domain Controller |
+| SPLUNK01 (Ubuntu Server) | 192.168.100.20 | Splunk Enterprise (SIEM) |
+| WIN11-01 (Windows 11) | 192.168.100.30 | Domain-joined endpoint + Sysmon + UF |
+| KALI01 (Kali Linux) | 192.168.100.40 | Attack simulation (isolated lab only) |
+
+Network: isolated Host-Only network · Domain: `soclab.local`
+
+---
+
+## 🛠️ Build phases
+| Phase | What was done | Evidence |
+|------:|---------------|----------|
+| 1 | Domain Controller + AD users/OUs | [screenshots/phase1-DC01](screenshots/phase1-DC01) |
+| 2 | Join Windows 11 to the domain (+ connectivity) | [screenshots/phase2-Windows11](screenshots/phase2-Windows11) |
+| 3 | Active Directory users & domain login | [screenshots/Phase-03_ActiveDirectory](screenshots/Phase-03_ActiveDirectory) |
+| 4 | Sysmon install + event verification | [screenshots/Phase-04_Sysmon](screenshots/Phase-04_Sysmon) |
+| 5 | Splunk Enterprise + Universal Forwarder (port 9997) | [screenshots/Phase-05_Splunk](screenshots/Phase-05_Splunk) |
+| 6 | Kali attacker VM + network verification | [screenshots/Phase-06_Kali](screenshots/Phase-06_Kali) |
+| 7 | Attacks: Nmap scans + NetExec SMB brute force | [screenshots/Phase-07_Attacks](screenshots/Phase-07_Attacks) |
+| 8 | Detection in Splunk (SPL + dashboard) | [screenshots/Phase-08_Detection](screenshots/Phase-08_Detection) |
+| 9 | Incident investigation & report | [screenshots/Phase-09_Investigation](screenshots/Phase-09_Investigation) |
+| 10 | Hardening + validation (attack re-tested & blocked) | [screenshots/Phase-10_Hardening](screenshots/Phase-10_Hardening) |
+
+## 🔎 Detection scenarios
+**1) Network scanning (Nmap)**
+```spl
+index=wineventlog EventCode=5156
+| stats count by src_ip, dest_port
+| sort -count
+```
+**2) SMB brute force (failed logons)**
+```spl
+index=wineventlog EventCode=4625
+| stats count by Account_Name, src_ip
+| where count >= 5
+| sort -count
+```
+**3) Successful logon after brute force (compromise check)**
+```spl
+index=wineventlog (EventCode=4625 OR EventCode=4624) Account_Name=<target>
+| table _time, EventCode, Account_Name, src_ip
+```
+**4) Sysmon network connections**
+```spl
+index=sysmon EventCode=3
+| stats count by SourceIp, DestinationIp, DestinationPort
+```
+
+## 🧭 Incident investigation (highlights)
+Traced a **NetExec SMB brute-force** attack from `192.168.100.40` against a target account: identified the attacker IP, the targeted account, built an attack timeline, and confirmed the follow-up successful logon and Sysmon network connections.
+→ Full write-up: **[Phase09-Incident-Report-BruteForce-Final.pdf](Phase09-Incident-Report-BruteForce-Final.pdf)**
+
+## 🔒 Hardening & validation (the standout)
+Applied and **validated** defensive controls, then **re-ran the same attack to prove it was blocked**:
+- Account lockout policy (domain + local) → **lockout events triggered, no successful logon**
+- **SMBv1 disabled**, RDP disabled, Windows Firewall enforced, admin shares reviewed
+- Verified telemetry (Sysmon + forwarder) still healthy after hardening
+- **Result:** NetExec brute force **blocked** after hardening.
+→ Full write-up: **[Phase10-Hardening-Validation-Report-Final.pdf](Phase10-Hardening-Validation-Report-Final.pdf)**
+
+## 📊 Dashboard
+A SOC monitoring dashboard summarizing events, top hosts, failed/successful logons, and scan/brute-force detections.
+→ **[soc_monitoring_Dashboard.pdf](soc_monitoring_Dashboard.pdf)**
+
+## 🎯 MITRE ATT&CK mapping
+| Technique | ID | Where |
+|-----------|----|-------|
+| Network Service Discovery | T1046 | Nmap scans → Splunk detection |
+| Brute Force: Password Guessing | T1110.001 | NetExec SMB → 4625 detection |
+| Valid Accounts | T1078 | post-brute-force logon check |
+| SMB/Windows Admin Shares | T1021.002 | SMB access + hardening |
+
+## 🧠 Skills demonstrated
+Active Directory · Windows Event Logging · Sysmon telemetry · Splunk SPL · SIEM log collection (Universal Forwarder) · attack detection · incident investigation & reporting · **system hardening & validation**.
+
+## 📁 Repository contents
+- `Phase09-Incident-Report-BruteForce-Final.pdf` — incident report
+- `Phase10-Hardening-Validation-Report-Final.pdf` — hardening & validation report
+- `soc_monitoring_Dashboard.pdf` — SOC dashboard
+- `screenshots/` — 78 phase-by-phase screenshots (evidence)
+
+## 🚀 Future improvements
+Add Splunk Security Essentials · more Sysmon detections (encoded PowerShell, LOLBins) · pfSense firewall logs · threat-intel enrichment · SOAR automation.
+
+---
+> ⚠️ All offensive activity was performed inside an **isolated Host-Only lab** on systems I own, strictly for educational and defensive purposes.

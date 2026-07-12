@@ -1,0 +1,20 @@
+# Never commit VMs / ISOs / disk images (huge)
+*.vdi
+*.vmdk
+*.vhd
+*.vhdx
+*.iso
+*.ova
+*.nvram
+*.vbox*
+VirtualBox-VMs/
+VM-Images/
+ISOs/
+
+# Office temp / lock files
+~$*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
