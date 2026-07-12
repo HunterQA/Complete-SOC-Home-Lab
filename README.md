@@ -24,7 +24,7 @@ An end-to-end Security Operations Center home lab that simulates a small enterpr
                                      v
 [ Windows Server 2022 (DC01) ] -->  [ Splunk Enterprise ]  <-- analysis
   192.168.10.10                      192.168.10.40
-  AD + DNS (Sysmon + UF)             indexes: wineventlog, sysmon
+  AD + DNS (Sysmon + UF)             index: main
 ```
 
 ## 🧩 Lab components
@@ -53,41 +53,48 @@ Network: isolated Host-Only network · Domain: `soclab.local`
 | 9 | Incident investigation & report | [screenshots/Phase-09_Investigation](screenshots/Phase-09_Investigation) |
 | 10 | Hardening + validation (attack re-tested & blocked) | [screenshots/Phase-10_Hardening](screenshots/Phase-10_Hardening) |
 
-## 🔎 Detection scenarios
-**1) Network scanning (Nmap)**
+## 🔎 Detection scenarios (SPL)
+All logs land in a single Splunk index (`main`) and are filtered by `source`.
+
+**1) Port-scan detection (Nmap)** — after enabling Windows Filtering Platform auditing:
 ```spl
-index=wineventlog EventCode=5156
-| stats count by src_ip, dest_port
-| sort -count
+index=main source="WinEventLog:Security" (EventCode=5156 OR EventCode=5157)
+| stats dc(Dest_Port) as scanned_ports by Source_Address
+| where scanned_ports > 20
 ```
-**2) SMB brute force (failed logons)**
+**2) SMB brute force — failed logons (Event 4625):**
 ```spl
-index=wineventlog EventCode=4625
-| stats count by Account_Name, src_ip
-| where count >= 5
-| sort -count
+index=main source="WinEventLog:Security" EventCode=4625
+| table _time, Account_Name, Source_Network_Address, Failure_Reason, Sub_Status
+| sort -_time
 ```
-**3) Successful logon after brute force (compromise check)**
+**3) Brute force followed by success (compromise check):**
 ```spl
-index=wineventlog (EventCode=4625 OR EventCode=4624) Account_Name=<target>
-| table _time, EventCode, Account_Name, src_ip
+index=main source="WinEventLog:Security" (EventCode=4625 OR EventCode=4624) Account_Name="localadmin"
+| table _time, EventCode, Account_Name, Source_Network_Address, Logon_Type
+| sort _time
 ```
-**4) Sysmon network connections**
+**4) Account lockout (Event 4740) — proof of hardening:**
 ```spl
-index=sysmon EventCode=3
+index=main source="WinEventLog:Security" EventCode=4740
+| table _time, TargetUserName, CallerComputerName
+```
+**5) Sysmon network connections (Event 3):**
+```spl
+index=main (source="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational" OR source="WinEventLog:Microsoft-Windows-Sysmon/Operational") EventCode=3
 | stats count by SourceIp, DestinationIp, DestinationPort
 ```
 
 ## 🧭 Incident investigation (highlights)
-Traced a **NetExec SMB brute-force** attack from `192.168.10.30` against a target account: identified the attacker IP, the targeted account, built an attack timeline, and confirmed the follow-up successful logon and Sysmon network connections.
+Traced a **NetExec SMB brute-force** attack from `192.168.10.30` against the **local account `localadmin`** on WIN11-01: **31 failed logons (Event 4625)** followed by **4 successful logons (Event 4624)**, all **Logon Type 3** (network). Identified the attacker IP and targeted account, reconstructed the attack timeline, and correlated Security logs with Sysmon Event 3.
 → Full write-up: **[Phase09-Incident-Report-BruteForce-Final.pdf](Phase09-Incident-Report-BruteForce-Final.pdf)**
 
 ## 🔒 Hardening & validation (the standout)
 Applied and **validated** defensive controls, then **re-ran the same attack to prove it was blocked**:
-- Account lockout policy (domain + local) → **lockout events triggered, no successful logon**
-- **SMBv1 disabled**, RDP disabled, Windows Firewall enforced, admin shares reviewed
-- Verified telemetry (Sysmon + forwarder) still healthy after hardening
-- **Result:** NetExec brute force **blocked** after hardening.
+- **Account-lockout policy** (threshold = 5 failed attempts, 15-min duration/observation window)
+- **SMBv1 disabled** + SMB signing, RDP disabled, Windows Firewall enforced (all profiles), admin shares reviewed
+- Verified telemetry (Sysmon + Universal Forwarder) still healthy after hardening
+- **Result:** the repeated NetExec attack returned `STATUS_ACCOUNT_LOCKED_OUT` — **no successful logon after lockout** ✅
 → Full write-up: **[Phase10-Hardening-Validation-Report-Final.pdf](Phase10-Hardening-Validation-Report-Final.pdf)**
 
 ## 📊 Dashboard
